@@ -9,6 +9,8 @@ const HEX_RADIUS: f32 = 40.0;
 const N_HEX_EDGE: i32 = 5;
 const CLICK_BURNOUT: f32 = 0.1;
 const CLICK_VISUAL_BURNOUT: f32 = 0.2;
+const FPS: f32 = 60.0;
+const PLAYER_SPEED: f32 = 10.0;
 
 
 mod hexmap;

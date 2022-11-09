@@ -2,7 +2,11 @@ use bevy::{
     prelude::*, 
 };
 
-use crate::HEX_RADIUS;
+use crate::{
+    HEX_RADIUS,
+    FPS,
+    PLAYER_SPEED,
+};
 
 const START_POS: (f32, f32) = (0.0, 0.0);
 
@@ -22,6 +26,7 @@ pub struct Player {
     pub on_move: bool,
     pub direction: (f32, f32),
     pub target: Option<Vec3>,
+    pub frame_timer: Timer,
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -63,10 +68,20 @@ fn setup_player(
         },
         ..default() 
     }).id();
-    commands.entity(player).insert(Player {on_move: false, direction: (0.0,0.0), target: None}).insert(AnimationTimer(Timer::from_seconds(0.1, true)));
+    commands
+        .entity(player)
+        .insert(Player {
+                on_move: false, 
+                direction: (0.0,0.0), 
+                target: None, 
+                frame_timer: Timer::from_seconds(1.0/FPS, true)
+            })
+        .insert(AnimationTimer( 
+            Timer::from_seconds(0.1, true) )
+        );
 }
 
-fn compute_distance(    
+pub fn compute_distance(    
     pos_a: Vec3,
     pos_b: Vec3,
 ) -> f32 {
@@ -76,13 +91,15 @@ fn compute_distance(
 }
 
 fn movement(
-    mut player_query: Query<(&mut Player, &mut Transform), With<Player>>
+    mut player_query: Query<(&mut Player, &mut Transform), With<Player>>,
+    time: Res<Time>,
 ) {
     let (mut player, mut player_transform) = player_query.single_mut();
-    if player.on_move {
+    player.frame_timer.tick(time.delta());
+    if player.on_move && player.frame_timer.just_finished(){
         let target_pos = player.target.unwrap();
-        if compute_distance(player_transform.translation, target_pos) > 0.5 {
-            player_transform.translation += Vec3::new(player.direction.0, player.direction.1, 0.0);
+        if compute_distance(player_transform.translation, target_pos) > PLAYER_SPEED {
+            player_transform.translation += Vec3::new(player.direction.0*PLAYER_SPEED, player.direction.1*PLAYER_SPEED, 0.0);
         } else {
             player.on_move = false;
             player_transform.translation = Vec3::new(target_pos[0],target_pos[1],20.0);
