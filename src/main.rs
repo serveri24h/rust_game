@@ -7,7 +7,8 @@ const SCREEN_H: f32 = 800.0;
 const BORDER_BUF: f32 = 50.0;
 const HEX_RADIUS: f32 = 40.0;
 const N_HEX_EDGE: i32 = 5;
-const CLICK_BURNOUT: f32 = 1.0;
+const CLICK_BURNOUT: f32 = 0.1;
+const CLICK_VISUAL_BURNOUT: f32 = 0.2;
 
 
 mod hexmap;
@@ -22,7 +23,6 @@ use hex::create_hex;
 use click::ClickPlugin;
 use camera::CameraPlugin;
 use player::PlayerPlugin;
-use debug::DebugPlugin;
 
 fn main() {
     App::new()

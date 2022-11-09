@@ -12,12 +12,17 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App ) {
         app
             .add_startup_system(setup_player)
-            .add_system(animate_sprite);
+            .add_system(animate_sprite)
+            .add_system(movement);
     }
 }
 
 #[derive(Component)]
-pub struct Player;
+pub struct Player {
+    pub on_move: bool,
+    pub direction: (f32, f32),
+    pub target: Option<Vec3>,
+}
 
 #[derive(Component, Deref, DerefMut)]
 struct AnimationTimer(Timer);
@@ -52,11 +57,35 @@ fn setup_player(
     let player = commands.spawn_bundle( SpriteSheetBundle {
         texture_atlas: texture_atlas_handle,
         transform: Transform {
-            translation: Vec3::new(START_POS.0 * HEX_RADIUS,START_POS.1*HEX_RADIUS,20.0),
+            translation: Vec3::new(START_POS.0 * HEX_RADIUS,START_POS.1*HEX_RADIUS,100.0),
             scale: Vec3::splat(2.5),
             ..default()
         },
         ..default() 
     }).id();
-    commands.entity(player).insert(Player).insert(AnimationTimer(Timer::from_seconds(0.1, true)));
+    commands.entity(player).insert(Player {on_move: false, direction: (0.0,0.0), target: None}).insert(AnimationTimer(Timer::from_seconds(0.1, true)));
+}
+
+fn compute_distance(    
+    pos_a: Vec3,
+    pos_b: Vec3,
+) -> f32 {
+        let x_dif = pos_a[0]-pos_b[0];
+        let y_dif = pos_a[1]-pos_b[1];
+        (x_dif*x_dif+y_dif*y_dif).sqrt()
+}
+
+fn movement(
+    mut player_query: Query<(&mut Player, &mut Transform), With<Player>>
+) {
+    let (mut player, mut player_transform) = player_query.single_mut();
+    if player.on_move {
+        let target_pos = player.target.unwrap();
+        if compute_distance(player_transform.translation, target_pos) > 0.5 {
+            player_transform.translation += Vec3::new(player.direction.0, player.direction.1, 0.0);
+        } else {
+            player.on_move = false;
+            player_transform.translation = Vec3::new(target_pos[0],target_pos[1],20.0);
+        }
+    }
 }
