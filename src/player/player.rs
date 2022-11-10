@@ -6,6 +6,7 @@ use crate::{
     HEX_RADIUS,
     FPS,
     PLAYER_SPEED,
+    tools::compute_distance,
 };
 
 const START_POS: (f32, f32) = (0.0, 0.0);
@@ -79,15 +80,6 @@ fn setup_player(
         .insert(AnimationTimer( 
             Timer::from_seconds(0.1, true) )
         );
-}
-
-pub fn compute_distance(    
-    pos_a: Vec3,
-    pos_b: Vec3,
-) -> f32 {
-        let x_dif = pos_a[0]-pos_b[0];
-        let y_dif = pos_a[1]-pos_b[1];
-        (x_dif*x_dif+y_dif*y_dif).sqrt()
 }
 
 fn movement(

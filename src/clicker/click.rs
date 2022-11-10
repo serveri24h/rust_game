@@ -5,9 +5,10 @@ use bevy::{
 
 use crate::{
     SCREEN_W, SCREEN_H, HEX_RADIUS, CLICK_BURNOUT, CLICK_VISUAL_BURNOUT,
+    tools::compute_distance,
     camera::CameraData, 
     hexmap::HexTile,
-    player::{Player, compute_distance},
+    player::Player,
 };
 
 pub struct ClickPlugin;
@@ -115,7 +116,7 @@ fn spawn_route(
                     ..default() 
                 },
                 transform: Transform {
-                    translation: pos,
+                    translation: Vec3::new(pos[0], pos[1], 10.0),
                     scale: Vec3::splat(10.0),
                     ..default()
                 },

@@ -2,12 +2,11 @@ use bevy::{
     prelude::*, 
     sprite::MaterialMesh2dBundle,
 };
-//use rand::prelude::*;
 
 use crate::{
-    create_hex,
     HEX_RADIUS,
     N_HEX_EDGE,
+    hexmap::hex::create_hex,
 };
 
 pub struct MapPlugin;
