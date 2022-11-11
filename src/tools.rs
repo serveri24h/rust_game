@@ -1,10 +1,31 @@
 use bevy::prelude::*;
 
+use crate::HEX_RADIUS;
+
 pub fn compute_distance(    
     pos_a: Vec3,
     pos_b: Vec3,
 ) -> f32 {
-        let x_dif = pos_a[0]-pos_b[0];
-        let y_dif = pos_a[1]-pos_b[1];
-        (x_dif*x_dif+y_dif*y_dif).sqrt()
+        let dif = pos_a - pos_b;
+        (dif[0]*dif[0]+dif[1]*dif[1]).sqrt()
+}
+
+pub trait Collider {
+
+    fn get_translation(&self) -> Vec3;
+
+    fn get_radius(&self) -> f32 {
+        HEX_RADIUS
+    } 
+    
+
+    fn collision_check(
+        &self,
+        pos: Vec3,
+    ) -> bool {
+        if compute_distance(self.get_translation(), pos) < self.get_radius() {
+            return true;
+        }; 
+        return  false;
+    }
 }

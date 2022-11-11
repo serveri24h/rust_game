@@ -10,18 +10,17 @@ const N_HEX_EDGE: i32 = 5;
 const CLICK_BURNOUT: f32 = 0.1;
 const CLICK_VISUAL_BURNOUT: f32 = 0.2;
 const FPS: f32 = 60.0;
-const PLAYER_SPEED: f32 = 4.0;
+const PLAYER_SPEED: f32 = 20.0;
 
 
 mod hexmap;
-mod clicker;
+mod input_handling;
 mod camera;
 mod player;
-mod debug;
 mod tools;
 
 use hexmap::MapPlugin;
-use clicker::ClickPlugin;
+use input_handling::ClickPlugin;
 use camera::CameraPlugin;
 use player::PlayerPlugin;
 

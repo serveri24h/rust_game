@@ -6,7 +6,9 @@ use crate::{
     HEX_RADIUS,
     FPS,
     PLAYER_SPEED,
-    tools::compute_distance,
+    tools::{
+        compute_distance,
+    },
 };
 
 const START_POS: (f32, f32) = (0.0, 0.0);
@@ -69,13 +71,14 @@ fn setup_player(
         },
         ..default() 
     }).id();
+
     commands
         .entity(player)
         .insert(Player {
                 on_move: false, 
                 direction: (0.0,0.0), 
                 target: None, 
-                frame_timer: Timer::from_seconds(1.0/FPS, true)
+                frame_timer: Timer::from_seconds(1.0/FPS, true),
             })
         .insert(AnimationTimer( 
             Timer::from_seconds(0.1, true) )

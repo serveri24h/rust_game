@@ -7,6 +7,7 @@ use crate::{
     HEX_RADIUS,
     N_HEX_EDGE,
     hexmap::hex::create_hex,
+    tools::Collider
 };
 
 pub struct MapPlugin;
@@ -17,9 +18,16 @@ impl Plugin for MapPlugin {
     }
 }
 
-
 #[derive(Component)]
-pub struct HexTile;
+pub struct HexTile {
+    translation: Vec3,
+}
+
+impl Collider for HexTile {
+    fn get_translation(&self) -> Vec3 {
+        self.translation
+    }
+}
 
 fn setup(
     mut commands: Commands,
@@ -40,12 +48,17 @@ fn setup(
             j = N_HEX_EDGE*2-2-k;
         }
         for i in 0..(N_HEX_EDGE+j) {
-            //col = Color::rgb( rng.gen(), rng.gen(), rng.gen() );
+
+
+            let x_pos = 1.5 * HEX_RADIUS * k as f32;
+            let y_pos = i as f32 * 2.0*s -s * j as f32;
+            let hex_translation = Vec3::new(x_pos , y_pos ,0.0);
+
             col = Color::rgb(1.0,1.0,0.0);
             let tile = commands.spawn_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(hex.clone()).into(),
-                transform: Transform {
-                    translation: Vec3::new(1.5 * HEX_RADIUS * k as f32 ,i as f32 * 2.0*s -s * j as f32 ,0.0),
+                transform: Transform { 
+                    translation: hex_translation, 
                     ..default()
                 },
                 material: materials.add(ColorMaterial {
@@ -54,7 +67,10 @@ fn setup(
                 }),
                 ..default()
             }).id();
-            commands.entity(tile).insert(HexTile);
+            commands.entity(tile).insert(HexTile{
+                translation: hex_translation,
+            });
         }
     }
 }
+

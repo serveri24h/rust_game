@@ -3,9 +3,11 @@ use bevy::{
     prelude::*,
 };
 
+use super::{ check_route_visual, spawn_route };
+
 use crate::{
-    SCREEN_W, SCREEN_H, HEX_RADIUS, CLICK_BURNOUT, CLICK_VISUAL_BURNOUT,
-    tools::compute_distance,
+    SCREEN_W, SCREEN_H, CLICK_BURNOUT, CLICK_VISUAL_BURNOUT,
+    tools::Collider,
     camera::CameraData, 
     hexmap::HexTile,
     player::Player,
@@ -52,7 +54,7 @@ fn clicker(
     mut mouse_event: EventReader<CursorMoved>,
     cam_data: Res<CameraData>,
     mut click_tracker: ResMut<ClickTracker>,
-    mut hex_query: Query<&Transform, With<HexTile>>,
+    mut hex_query: Query<(&Transform, &HexTile), With<HexTile>>,
     mut player_query: Query<(&mut Transform, &mut Player), (With<Player>, Without<HexTile>)>,
     time: Res<Time>,
 ) {
@@ -64,11 +66,11 @@ fn clicker(
             let mouse_pos = Vec3::new(x.position[0]+cam_data.offset_w - SCREEN_W/2.0, x.position[1]+cam_data.offset_h - SCREEN_H/2.0, 100.0);
             let mut click_color = Color::rgb(1.0, 0.0, 0.0);
             if !player.on_move {
-                for hex_transform in hex_query.iter_mut() {
-                    if hex_click_collision_check(mouse_pos, hex_transform.translation) {
+                for (hex_transform, hex_tile) in hex_query.iter_mut() {  
+                    if hex_tile.collision_check(mouse_pos) {
                         click_color = Color::rgb(0.0, 1.0, 0.0);
                         player.on_move = true;
-                        player.direction = compute_direction(hex_transform.translation, player_transport.translation);
+                        player.direction = compute_direction(hex_tile.get_translation(), player_transport.translation);
                         player.target = Some(hex_transform.translation);
                         spawn_route(&mut commands, &player_transport, &player);
                     }
@@ -92,53 +94,7 @@ pub struct ClickVisual {
     direction: (f32, f32),
 }
 
-#[derive(Component)]
-pub struct RouteVisual;
 
-fn spawn_route(
-    commands: &mut Commands,
-    player_transform: &Transform, 
-    player: &Player,
-) { 
-    if player.on_move {
-        let route_parent = commands.spawn_bundle(SpatialBundle::default()).insert(RouteVisual).id();
-        let mut children = Vec::new();
-
-        let mut pos = player_transform.translation.clone();
-        let end_pos = player.target.unwrap();
-        let mov = Vec3::new( player.direction.0*30.0, player.direction.1*30.0, 0.0 );
-
-        
-        while compute_distance(pos, end_pos) > 20.0  {
-            children.push(commands.spawn_bundle(SpriteBundle{
-                sprite: Sprite { 
-                    color: Color::rgb(1.0,1.0,1.0), 
-                    ..default() 
-                },
-                transform: Transform {
-                    translation: Vec3::new(pos[0], pos[1], 10.0),
-                    scale: Vec3::splat(10.0),
-                    ..default()
-                },
-                ..default()
-            }).id());
-            pos += mov;
-        } 
-        children.push(commands.spawn_bundle( SpriteBundle{
-            sprite: Sprite { 
-                color: Color::rgb(1.0,1.0,1.0), 
-                ..default() 
-            },
-            transform: Transform {
-                translation: end_pos,
-                scale: Vec3::splat(30.0),
-                ..default()
-            },
-            ..default()
-        }).id());
-        commands.entity(route_parent).push_children(&children);
-    }
-}
 
 fn spawn_click_visual(
     commands: &mut Commands,
@@ -183,29 +139,4 @@ fn check_click_visual(
     } 
 }
 
-fn check_route_visual(
-    mut commands: Commands,
-    player_query: Query<&Player>,
-    route_query: Query<Entity, (With<RouteVisual>, Without<Player>)>
-){
-    let player = player_query.get_single().unwrap();
-    for route in route_query.iter(){
-        if !player.on_move {
-            commands.entity(route).despawn_recursive();
-        }
-    }
-}
 
-fn hex_click_collision_check(
-    click_pos: Vec3,
-    hex_translation: Vec3,
-) -> bool {
-    let x_dif = hex_translation[0]-click_pos[0];
-    let y_dif = hex_translation[1]-click_pos[1];
-    let squared_dif = x_dif*x_dif+y_dif*y_dif;
-
-    if squared_dif.sqrt() < HEX_RADIUS {
-        return true;
-    }; 
-    return  false;
-}

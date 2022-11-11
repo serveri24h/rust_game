@@ -16,8 +16,6 @@ pub struct CameraData {
     pub offset_h: f32,
 }
 
-
-
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -25,7 +23,6 @@ impl Plugin for CameraPlugin {
         app.add_startup_system(camera_setup);
     }
 }
-
 
 fn camera_setup(
     mut commands: Commands,
@@ -44,5 +41,4 @@ fn camera_setup(
     });
 
     commands.insert_resource(cam_data);
-
 }
