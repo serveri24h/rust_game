@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::{ check_route_visual, spawn_route };
+use super::{ check_route_visual, RouteVisual, route::RouteVisualization };
 
 use crate::{
     SCREEN_W, SCREEN_H, CLICK_BURNOUT, CLICK_VISUAL_BURNOUT,
@@ -36,6 +36,8 @@ fn setup_clicker(mut commands: Commands){
         on_burnout: false,
         timer: Timer::from_seconds(CLICK_BURNOUT, false),
     });
+    let r = RouteVisual;
+    commands.insert_resource(RouteVisual);
 }
 
 fn compute_direction(
@@ -57,6 +59,7 @@ fn clicker(
     mut hex_query: Query<(&Transform, &HexTile), With<HexTile>>,
     mut player_query: Query<(&mut Transform, &mut Player), (With<Player>, Without<HexTile>)>,
     time: Res<Time>,
+    route: Res<RouteVisual>,
 ) {
     if !click_tracker.on_burnout {
         if mouse_input.just_pressed(MouseButton::Left) {
@@ -72,7 +75,7 @@ fn clicker(
                         player.on_move = true;
                         player.direction = compute_direction(hex_tile.get_translation(), player_transport.translation);
                         player.target = Some(hex_transform.translation);
-                        spawn_route(&mut commands, &player_transport, &player);
+                        route.spawn_route(&mut commands, &player_transport, &player);
                     }
                 }
             }
