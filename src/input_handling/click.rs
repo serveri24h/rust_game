@@ -1,6 +1,7 @@
 
 use bevy::{
-    prelude::*,
+    prelude::*, 
+    sprite::ColorMaterial,
 };
 
 use super::{ check_route_visual, RouteVisual, route::RouteVisualization };
@@ -9,7 +10,7 @@ use crate::{
     SCREEN_W, SCREEN_H, CLICK_BURNOUT, CLICK_VISUAL_BURNOUT,
     tools::Collider,
     camera::CameraData, 
-    hexmap::HexTile,
+    hexmap::{HexTile},
     player::Player,
 };
 
@@ -25,25 +26,46 @@ impl Plugin for ClickPlugin {
     }
 }
 
+pub enum UpdateStyle {
+    Delete,
+    Create,
+    Idle,
+}
+
 #[derive(Component)]
 pub struct ClickTracker {
     pub on_burnout: bool,
     pub timer: Timer,
+    pub selected_hex: Option<u16>,
+    pub requires_update: bool,
+    pub change: UpdateStyle,
 } 
+
+impl ClickTracker {
+    fn check_burnout(&mut self,time: Res<Time>){
+        self.timer.tick(time.delta());
+        if self.timer.just_finished() {
+            self.on_burnout = false;
+            self.timer.reset();
+        }
+    }
+}
 
 fn setup_clicker(mut commands: Commands){
     commands.insert_resource( ClickTracker {
         on_burnout: false,
         timer: Timer::from_seconds(CLICK_BURNOUT, false),
+        selected_hex: None,
+        requires_update: false,
+        change: UpdateStyle::Create,
     });
-    let r = RouteVisual;
     commands.insert_resource(RouteVisual);
 }
 
 fn compute_direction(
     click_pos: Vec3,
     player_pos: Vec3,
-) -> (f32, f32){
+) -> (f32, f32) {
     let x_dif = click_pos[0]-player_pos[0];
     let y_dif = click_pos[1]-player_pos[1];
     let len = (x_dif*x_dif+y_dif*y_dif).sqrt();
@@ -52,42 +74,85 @@ fn compute_direction(
 
 fn clicker(
     mut commands: Commands, 
-    mouse_input: Res<Input<MouseButton>>,
     mut mouse_event: EventReader<CursorMoved>,
+    mouse_input: Res<Input<MouseButton>>,
     cam_data: Res<CameraData>,
-    mut click_tracker: ResMut<ClickTracker>,
-    mut hex_query: Query<(&Transform, &HexTile), With<HexTile>>,
-    mut player_query: Query<(&mut Transform, &mut Player), (With<Player>, Without<HexTile>)>,
     time: Res<Time>,
-    route: Res<RouteVisual>,
+    mut click_tracker: ResMut<ClickTracker>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut hex_query: Query<(
+        &Transform, 
+        &mut Handle<ColorMaterial>, 
+        &HexTile
+    ), With<HexTile>>,
+    mut player_query: Query<(
+        &mut Transform, 
+        &mut Player
+    ), (With<Player>, Without<HexTile>)>,
 ) {
     if !click_tracker.on_burnout {
         if mouse_input.just_pressed(MouseButton::Left) {
+
+            // Get the player
             let (player_transport, mut player) = player_query.get_single_mut().unwrap();
+
+            // Set click-burnout to true to avoid multiple inputs
             click_tracker.on_burnout = true;
+
+            // Mouse Position
             let x = mouse_event.iter().next().unwrap();
             let mouse_pos = Vec3::new(x.position[0]+cam_data.offset_w - SCREEN_W/2.0, x.position[1]+cam_data.offset_h - SCREEN_H/2.0, 100.0);
-            let mut click_color = Color::rgb(1.0, 0.0, 0.0);
+
+            // Default click color is red
+            let mut click_color = Color::rgb(0.6, 0.0, 0.0);
+
+            // Stationary Player Logic
             if !player.on_move {
-                for (hex_transform, hex_tile) in hex_query.iter_mut() {  
+                let old_click = click_tracker.selected_hex.clone();
+                for (hex_transform, hex_material, hex_tile) in hex_query.iter_mut() {  
+                    
                     if hex_tile.collision_check(mouse_pos) {
                         click_color = Color::rgb(0.0, 1.0, 0.0);
-                        player.on_move = true;
-                        player.direction = compute_direction(hex_tile.get_translation(), player_transport.translation);
-                        player.target = Some(hex_transform.translation);
-                        route.spawn_route(&mut commands, &player_transport, &player);
+                        let mut a =  materials.get_mut(&hex_material).unwrap();
+                        match click_tracker.selected_hex {
+                            Some(id) => {
+                                if id == hex_tile.id {
+                                    player.on_move = true;
+                                    click_tracker.requires_update = true;
+                                    click_tracker.selected_hex = None;
+                                    click_tracker.change = UpdateStyle::Delete;
+                                } else {
+                                    player.target = Some(hex_transform.translation);
+                                    player.direction = compute_direction(hex_tile.get_translation(), player_transport.translation);
+                                    a.color = Color::rgb(0.0, 1.0, 0.0);
+                                    click_tracker.requires_update = true;
+                                    click_tracker.selected_hex = Some(hex_tile.id);
+                                    click_tracker.change = UpdateStyle::Create;
+                                }
+                            }
+                            None => { 
+                                player.target = Some(hex_transform.translation);
+                                player.direction = compute_direction(hex_tile.get_translation(), player_transport.translation);
+                                a.color = Color::rgb(0.0, 1.0, 0.0);
+                                click_tracker.requires_update = true;
+                                click_tracker.selected_hex = Some(hex_tile.id);
+                                click_tracker.change = UpdateStyle::Create;
+                            }
+                        }
                     }
+
+                    else if old_click == Some(hex_tile.id) {
+                        let mut a =  materials.get_mut(&hex_material).unwrap();
+                        a.color = Color::rgba(1.0,1.0,0.0, 0.1);
+
+                    }
+
                 }
             }
             spawn_click_visual(&mut commands, mouse_pos.clone(), click_color);
         }
     } else {
-        click_tracker.timer.tick(time.delta());
-        if click_tracker.timer.just_finished() {
-            click_tracker.on_burnout = false;
-            click_tracker.timer.reset();
-        }
-
+        click_tracker.check_burnout(time);
     }
 }
 
@@ -96,8 +161,6 @@ pub struct ClickVisual {
     timer: Timer,
     direction: (f32, f32),
 }
-
-
 
 fn spawn_click_visual(
     commands: &mut Commands,

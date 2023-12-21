@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     player::Player,
     tools::compute_distance,
+    input_handling::{ClickTracker, UpdateStyle }
 };
 
 
@@ -29,7 +30,7 @@ impl RouteVisualization for RouteVisual {
         player_transform: &Transform, 
         player: &Player,
     ) { 
-        if player.on_move {
+        if !player.on_move {
             let route_parent = commands.spawn_bundle(SpatialBundle::default()).insert(Self).id();
             let mut children = Vec::new();
 
@@ -71,35 +72,20 @@ impl RouteVisualization for RouteVisual {
 
 }
 
-pub fn check_route_visual(
-    mut commands: Commands,
-    player_query: Query<&Player>,
-    route_query: Query<Entity, (With<Route>, Without<Player>)>
-){
-    let player = player_query.get_single().unwrap();
-    for route in route_query.iter(){
-        if !player.on_move {
-            commands.entity(route).despawn_recursive();
-        }
-    }
-}
 
 
-/* 
-
-pub fn spawn_route(
+fn spawn_route(
     commands: &mut Commands,
     player_transform: &Transform, 
     player: &Player,
 ) { 
-    if player.on_move {
-        let route_parent = commands.spawn_bundle(SpatialBundle::default()).insert(Route).id();
+    if !player.on_move {
+        let route_parent = commands.spawn_bundle(SpatialBundle::default()).insert(RouteVisual).id();
         let mut children = Vec::new();
 
         let mut pos = player_transform.translation.clone();
         let end_pos = player.target.unwrap();
         let mov = Vec3::new( player.direction.0*30.0, player.direction.1*30.0, 0.0 );
-
 
         
         while compute_distance(pos, end_pos) > 20.0  {
@@ -109,7 +95,7 @@ pub fn spawn_route(
                     ..default() 
                 },
                 transform: Transform {
-                    translation: Vec3::new(pos[0], pos[1], 1.0),
+                    translation: Vec3::new(pos[0], pos[1], pos[2]),
                     scale: Vec3::splat(10.0),
                     ..default()
                 },
@@ -133,4 +119,23 @@ pub fn spawn_route(
     }
 }
 
-*/
+
+pub fn check_route_visual(
+    mut commands: Commands,
+    player_query: Query<(&Transform, &Player), With<Player>>,
+    route_query: Query<(Entity, &RouteVisual), (With<RouteVisual>, Without<Player>)>,
+    mut click_tracker: ResMut<ClickTracker>,
+){
+    let (player_transform, player) = player_query.single();
+    if click_tracker.requires_update {
+        click_tracker.requires_update = false;
+        for (route, route_visual) in route_query.iter(){
+            commands.entity(route).despawn_recursive();
+        }
+        match click_tracker.change {
+            UpdateStyle::Create => spawn_route(&mut commands, player_transform, player),
+            UpdateStyle::Delete => println!("lol"),
+            UpdateStyle::Idle => println!("lol"),
+        }
+    }
+}

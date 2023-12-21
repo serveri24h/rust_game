@@ -1,14 +1,20 @@
 use bevy::{
-    prelude::*, 
-    sprite::MaterialMesh2dBundle,
+    prelude::*,
+    sprite::{
+        Material2d, 
+        Mesh2dHandle, MaterialMesh2dBundle,
+    }
 };
+
+use std::hash::Hash;
 
 use crate::{
     HEX_RADIUS,
     N_HEX_EDGE,
-    hexmap::hex::create_hex,
     tools::Collider
 };
+
+use super::{MapGraph,create_hex};
 
 pub struct MapPlugin;
 
@@ -18,9 +24,13 @@ impl Plugin for MapPlugin {
     }
 }
 
+
+
+
 #[derive(Component)]
 pub struct HexTile {
-    translation: Vec3,
+    pub translation: Vec3,
+    pub id: u16,
 }
 
 impl Collider for HexTile {
@@ -40,6 +50,11 @@ fn setup(
     let mut col: Color;
     //let mut rng = rand::thread_rng();
     let mut j;
+    let mut id = 0;
+
+
+    let map = MapGraph::<u16, u16, u16>::new();
+
 
     for k in 0..(N_HEX_EDGE*2-1){
         if k < N_HEX_EDGE {
@@ -54,7 +69,7 @@ fn setup(
             let y_pos = i as f32 * 2.0*s -s * j as f32;
             let hex_translation = Vec3::new(x_pos , y_pos ,0.0);
 
-            col = Color::rgb(1.0,1.0,0.0);
+            col = Color::rgba(1.0,1.0,0.0, 0.1);
             let tile = commands.spawn_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(hex.clone()).into(),
                 transform: Transform { 
@@ -69,7 +84,9 @@ fn setup(
             }).id();
             commands.entity(tile).insert(HexTile{
                 translation: hex_translation,
+                id: id,
             });
+            id+=1;
         }
     }
 }
